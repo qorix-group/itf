@@ -32,6 +32,18 @@ py_itf_test(
 )
 
 py_itf_test(
+    name = "test_hardware_config_schema",
+    srcs = ["test_hardware_config_schema.py"],
+    data = [
+        "//test/resources:hardware_config",
+    ],
+    deps = [
+        "//score/itf/plugins/hardware:config",
+        "@rules_python//python/runfiles",
+    ],
+)
+
+py_itf_test(
     name = "test_rules_are_working_correctly",
     srcs = [
         "conftest.py",
@@ -82,6 +94,29 @@ py_itf_test(
     plugins = [
         "//score/itf/plugins:dlt_plugin",
         "//score/itf/plugins:docker_plugin",
+    ],
+)
+
+# Runs the same backend-agnostic test sources as test_docker / test_qemu_* but
+# against real hardware, selected purely via `plugins` + `--hardware-config`.
+# Tagged manual because it needs a reachable board described by the config file.
+py_itf_test(
+    name = "test_hardware",
+    srcs = [
+        "test_async_exec.py",
+        "test_ssh.py",
+    ],
+    args = [
+        "--hardware-config=$(location //test/resources:hardware_config)",
+    ],
+    data = [
+        "//test/resources:hardware_config",
+    ],
+    plugins = [
+        "//score/itf/plugins:hardware_plugin",
+    ],
+    tags = [
+        "manual",
     ],
 )
 

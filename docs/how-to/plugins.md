@@ -9,6 +9,7 @@ target type or a supporting capability (such as DLT message capture).
 |---|---|---|
 | `@score_itf//score/itf/plugins:docker_plugin` | Docker target | `--docker-image` |
 | `@score_itf//score/itf/plugins:qemu_plugin` | QEMU target | `--qemu-image`, `--qemu-config` |
+| `@score_itf//score/itf/plugins:hardware_plugin` | Physical hardware target (SSH) | `--hardware-config` |
 | `@score_itf//score/itf/plugins:dlt_plugin` | DLT capture | `--dlt-receive-path`, `--dlt-config` |
 | `@score_itf//score/itf/plugins:attribute_plugin` | Requirement traceability | N/A |
 
@@ -49,6 +50,38 @@ py_itf_test(
     plugins = ["@score_itf//score/itf/plugins:qemu_plugin"],
 )
 ```
+
+## Hardware plugin
+
+Runs the same test sources against a physical board that is already powered on
+and reachable over SSH. The board is described by a JSON configuration file
+(`host` is required; other keys default sensibly):
+
+```starlark
+py_itf_test(
+    name = "test_hardware",
+    srcs = ["test_hardware.py"],
+    args = ["--hardware-config=$(location hardware_config.json)"],
+    data = ["hardware_config.json"],
+    plugins = ["@score_itf//score/itf/plugins:hardware_plugin"],
+)
+```
+
+```json
+{
+    "host": "192.168.1.50",
+    "ssh_port": 22,
+    "username": "root",
+    "password": "root",
+    "reboot_command": "reboot",
+    "reboot_timeout_s": 180
+}
+```
+
+Because the `target` fixture is backend-neutral, the exact same test file can be
+run on Docker, QEMU, or hardware by changing only the `plugins` and config args
+of the Bazel target. `target.restart()` reboots the board via `reboot_command`
+and waits for it to come back online.
 
 ## DLT plugin
 

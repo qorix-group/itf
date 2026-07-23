@@ -25,3 +25,16 @@ py_library(
         requirement("typing-extensions"),
     ],
 )
+
+py_library(
+    name = "ssh_target",
+    srcs = [
+        "ssh_target.py",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":target",
+        "//score/itf/core/com",
+        "//score/itf/core/process",
+    ],
+)

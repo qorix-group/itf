@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -23,20 +23,17 @@ py_library(
 )
 
 py_library(
-    name = "qemu",
+    name = "hardware",
     srcs = [
         "__init__.py",
-        "checks.py",
-        "qemu.py",
-        "qemu_process.py",
-        "qemu_target.py",
+        "hardware_target.py",
     ],
     imports = ["."],
     visibility = ["//visibility:public"],
     deps = [
         ":config",
-        "//score/itf/core/process",
         "//score/itf/core/target:ssh_target",
-        "//score/itf/core/utils",
+        "//score/itf/plugins:core",
+        requirement("pytest"),
     ],
 )

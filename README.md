@@ -99,6 +99,7 @@ ITF supports modular plugins that extend functionality:
 - **`core`**: Basic functionality that is the entry point for plugin extensions and hooks
 - **`docker`**: Docker container targets with `exec`, `file_transfer`, and `restart` capabilities
 - **`qemu`**: QEMU virtual machine targets with `ssh`, `sftp`, `exec`, `file_transfer`, and `restart` capabilities
+- **`hardware`**: Physical hardware targets reached over SSH, with `ssh`, `sftp`, `exec`, `file_transfer`, and `restart` capabilities
 - **`dlt`**: DLT (Diagnostic Log and Trace) message capture and analysis
 
 ## Writing Tests
@@ -216,6 +217,50 @@ QEMU targets are configured using a JSON configuration file that specifies netwo
 }
 ```
 
+
+### Hardware Tests
+
+The `hardware` plugin runs the **same** test sources against a physical board
+that is already powered on and running an SSH server. The board is described by
+a JSON configuration file passed via `--hardware-config`; no test code changes
+are required to move a test from Docker/QEMU to real hardware — only the
+`plugins` and config args of the Bazel target differ.
+
+```python
+def test_on_hardware(target):
+    exit_code, output = target.execute("uname -a")
+    assert exit_code == 0
+```
+
+BUILD file:
+```starlark
+py_itf_test(
+    name = "test_hardware",
+    srcs = ["test_hardware.py"],
+    args = ["--hardware-config=$(location hardware_config.json)"],
+    data = ["hardware_config.json"],
+    plugins = ["@score_itf//score/itf/plugins:hardware_plugin"],
+)
+```
+
+The hardware configuration file uses JSON (consistent with the QEMU plugin).
+Only `host` is required; the remaining keys have sensible defaults:
+
+```json
+{
+    "host": "192.168.1.50",
+    "ssh_port": 22,
+    "username": "root",
+    "password": "root",
+    "private_key_path": "",
+    "reboot_command": "reboot",
+    "reboot_timeout_s": 180
+}
+```
+
+`target.restart()` issues `reboot_command` over SSH and then waits (up to
+`reboot_timeout_s` seconds) for the board to become reachable again. Use
+`private_key_path` instead of `password` for key-based authentication.
 
 ### Capability-Based Tests
 

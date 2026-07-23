@@ -40,6 +40,19 @@ filegroup(
 )
 
 filegroup(
+    name = "hardware_config",
+    srcs = [
+        "hardware_config.json",
+    ],
+    visibility = [
+        "//test:__pkg__",
+        # TODO: Should be only visibile to examples
+        "//visibility:public",
+        #"@score_itf_examples//:__subpackages__",
+    ],
+)
+
+filegroup(
     name = "qemu_port_forwarding_config",
     srcs = [
         "qemu_port_forwarding_config.json",

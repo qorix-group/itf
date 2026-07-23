@@ -57,6 +57,15 @@ py_itf_plugin(
 )
 
 py_itf_plugin(
+    name = "hardware_plugin",
+    enabled_plugins = [
+        "score.itf.plugins.hardware",
+    ],
+    py_library = "//score/itf/plugins/hardware",
+    visibility = ["//visibility:public"],
+)
+
+py_itf_plugin(
     name = "dlt_plugin",
     enabled_plugins = [
         "score.itf.plugins.dlt",
