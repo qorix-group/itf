@@ -286,10 +286,11 @@ class SshTarget(Target):
     def sftp(self, ssh_connection=None):
         return Sftp(ssh_connection, self._ssh_host(), self._ssh_port())
 
-    def ping(self, timeout, wait_ms_precision=None):
+    def ping(self, timeout, interval=1, wait_ms_precision=None):
         return ping(
             address=self._ssh_host(),
             timeout=timeout,
+            interval=interval,
             wait_ms_precision=wait_ms_precision,
         )
 
