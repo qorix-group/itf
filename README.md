@@ -303,7 +303,7 @@ def test_ssh_with_output(target):
 
 ### SFTP File Transfer
 
-SFTP is available on QEMU targets via `target.sftp()`:
+SFTP is available on SSH-backed targets (QEMU, hardware) via `target.sftp()`:
 
 ```python
 def test_file_transfer(target):
@@ -312,11 +312,11 @@ def test_file_transfer(target):
         sftp.download("/tmp/remote_file.txt", "downloaded_file.txt")
 ```
 
-> **Note:** `target.sftp()` is only available on QEMU targets. For Docker targets, use `target.upload()` and `target.download()` instead, which use the Docker API directly.
+> **Note:** `target.sftp()` requires the `sftp` capability. For Docker targets, use `target.upload()` and `target.download()` instead, which use the Docker API directly.
 
 ### Network Testing
 
-Network testing methods are available on QEMU targets:
+Network testing methods are available on SSH-backed targets (QEMU, hardware):
 
 ```python
 def test_ping(target):
@@ -327,7 +327,7 @@ def test_ping(target):
     target.ping_lost(timeout=30, interval=1)
 ```
 
-> **Note:** `target.ping()` and `target.ping_lost()` are only available on QEMU targets.
+> **Note:** `target.ping()` and `target.ping_lost()` require an SSH-backed target; Docker targets do not provide them.
 
 ## DLT Support
 

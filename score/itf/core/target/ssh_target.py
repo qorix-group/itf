@@ -283,8 +283,69 @@ class SshTarget(Target):
             password=password if password is not None else self._ssh_password(),
         )
 
-    def sftp(self, ssh_connection=None):
-        return Sftp(ssh_connection, self._ssh_host(), self._ssh_port())
+    def sftp(
+        self,
+        ssh_connection=None,
+        timeout: int = 15,
+        port: int = None,
+        n_retries: int = 5,
+        retry_interval: int = 1,
+        pkey_path: str = None,
+        username: str = None,
+        password: str = None,
+    ):
+        """Create SFTP connection to target.
+
+        When *ssh_connection* is None a new SSH connection is opened by the
+        returned :class:`Sftp` object, using the target's credentials unless
+        explicitly overridden.
+
+        :param Ssh ssh_connection: Existing SSH connection to reuse. If None a new one is created.
+        :param int timeout: Connection timeout in seconds. Default is 15 seconds.
+        :param int port: SSH port, if None use default port from config.
+        :param int n_retries: Number of retries to connect. Default is 5 retries.
+        :param int retry_interval: Interval between retries in seconds. Default is 1 second.
+        :param str pkey_path: Path to private key file. If None use default from config.
+        :param str username: SSH username. If None use default from config.
+        :param str password: SSH password. If None use default from config.
+        :return: Sftp connection object.
+        :rtype: Sftp
+        """
+        return Sftp(
+            ssh_connection,
+            target_ip=self._ssh_host(),
+            port=port if port else self._ssh_port(),
+            timeout=timeout,
+            n_retries=n_retries,
+            retry_interval=retry_interval,
+            pkey_path=pkey_path if pkey_path is not None else self._ssh_pkey_path(),
+            username=username if username is not None else self._ssh_username(),
+            password=password if password is not None else self._ssh_password(),
+        )
+
+    def is_reachable(self, timeout: int = 5) -> bool:
+        """Return *True* if an SSH session can be established right now.
+
+        Prefer this over :meth:`ping` for reachability decisions: ICMP needs
+        privileges the test process does not always have (a sandboxed test
+        runner has no ``CAP_NET_RAW``), while SSH is what the target contract
+        actually runs on.
+
+        :param timeout: connection timeout in seconds for the single attempt.
+        """
+        try:
+            with self.ssh(timeout=timeout, n_retries=1):
+                return True
+        except Exception:  # noqa: BLE001 - any failure to connect means unreachable
+            return False
+
+    def get_ip(self) -> str:
+        """Return the IP address or hostname the target is reached at.
+
+        Tests that talk to a service on the target over the network need this
+        address to open their own client connections.
+        """
+        return self._ssh_host()
 
     def ping(self, timeout, interval=1, wait_ms_precision=None):
         return ping(

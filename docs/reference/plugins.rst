@@ -42,6 +42,12 @@ Available plugins
      - QEMU virtual machine target. Provides ``ssh``, ``sftp``,
        ``exec``, ``file_transfer``, and ``restart`` capabilities, plus
        ``ping`` / ``ping_lost`` network-testing helpers.
+   * - ``@score_itf//score/itf/plugins:hardware_plugin``
+     - ``score.itf.plugins.hardware``
+     - Physical hardware target reached over SSH. Provides ``ssh``,
+       ``sftp``, ``exec``, ``file_transfer``, and ``restart``
+       capabilities, plus ``ping`` / ``ping_lost`` network-testing
+       helpers.
    * - ``@score_itf//score/itf/plugins:dlt_plugin``
      - ``score.itf.plugins.dlt``
      - DLT (Diagnostic Log and Trace) capture plugin. Provides the
@@ -64,24 +70,24 @@ Target capabilities
      - Provided by
      - Description
    * - ``exec``
-     - Docker, QEMU
+     - Docker, QEMU, Hardware
      - ``target.execute(cmd)`` — run a command and return
        ``(exit_code, output)``.
    * - ``ssh``
-     - QEMU
+     - QEMU, Hardware
      - ``target.ssh()`` — open an SSH session; returns an ``Ssh``
        object with ``execute_command`` and ``execute_command_output``
        methods.
    * - ``sftp``
-     - QEMU
+     - QEMU, Hardware
      - ``target.sftp()`` — open an SFTP session; returns an ``Sftp``
        object with ``upload`` and ``download`` methods.
    * - ``file_transfer``
-     - Docker, QEMU
+     - Docker, QEMU, Hardware
      - ``target.upload(local, remote)`` / ``target.download(remote,
        local)`` — copy files to/from the target.
    * - ``restart``
-     - Docker, QEMU
+     - Docker, QEMU, Hardware
      - ``target.restart()`` — restart the target.
 
 Target class API
@@ -171,6 +177,21 @@ QEMU plugin
      - Path to the QEMU kernel/disk image. Use
        ``$(location <label>)`` in ``args`` to reference a Bazel-built
        image.
+
+Hardware plugin
+^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Argument
+     - Description
+   * - ``--hardware-config=<path>``
+     - **Required.** Path to a JSON configuration file describing the board:
+       ``host`` plus optional ``ssh_port``, ``username``, ``password``,
+       ``private_key_path``, ``ssh_timeout``, ``n_retries``,
+       ``retry_interval``, ``reboot_command``, and ``reboot_timeout_s``.
 
 DLT plugin
 ^^^^^^^^^^

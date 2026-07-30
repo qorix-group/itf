@@ -43,8 +43,19 @@ def target_init(config):
     logger.info(f"Starting tests on host: {socket.gethostname()}")
     with hardware_target(config) as hardware:
         logger.info(f"Connecting to hardware target {config.host}:{config.ssh_port}")
-        if not hardware.ping(timeout=config.reboot_timeout_s, interval=1):
-            raise RuntimeError(f"Hardware target {config.host} is not reachable (ping failed)")
-        with hardware.ssh(timeout=config.ssh_timeout):
-            logger.info("SSH connection to hardware target established")
+        # Reachability is established with SSH rather than ICMP: everything the
+        # target contract does runs over SSH, and a test process without
+        # CAP_NET_RAW (any sandboxed runner) cannot send ICMP at all.
+        try:
+            with hardware.ssh(
+                timeout=config.ssh_timeout,
+                n_retries=config.n_retries,
+                retry_interval=config.retry_interval,
+            ):
+                logger.info("SSH connection to hardware target established")
+        except Exception as exc:
+            raise RuntimeError(
+                f"Hardware target {config.host}:{config.ssh_port} is not reachable over SSH "
+                f"after {config.n_retries} attempts: {exc}"
+            ) from exc
         yield hardware

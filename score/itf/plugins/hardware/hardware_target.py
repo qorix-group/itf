@@ -57,6 +57,9 @@ class HardwareTarget(SshTarget):
         then waits for the board to disappear and come back within
         ``reboot_timeout_s`` seconds.
 
+        Both waits probe with SSH rather than ICMP so the plugin works from a
+        test runner that has no permission to send ICMP.
+
         :raises RuntimeError: if the board is not reachable again in time.
         """
         command = self._config.reboot_command
@@ -69,21 +72,21 @@ class HardwareTarget(SshTarget):
             # The connection is expected to drop as the board goes down.
             logger.info(f"Connection dropped while issuing reboot (expected): {exc}")
 
-        # Give the board a moment to actually go down before probing again so a
-        # still-responsive board is not mistaken for a completed reboot. Bound
-        # this so a board that never drops does not consume the whole budget.
-        self.ping_lost(timeout=min(30, timeout_s), interval=1)
+        # Wait for the board to actually go down first, so a board that has not
+        # started rebooting yet is not mistaken for one that already finished.
+        # Bound this so a board that never drops does not eat the whole budget.
+        down_deadline = time.monotonic() + min(30, timeout_s)
+        while time.monotonic() < down_deadline:
+            if not self.is_reachable(timeout=2):
+                break
+            time.sleep(1)
 
         logger.info(f"Waiting up to {timeout_s}s for hardware target to come back online")
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
-            if self.ping(timeout=0):
-                try:
-                    with self.ssh(timeout=5, n_retries=1):
-                        logger.info("Hardware target is back online")
-                        return
-                except Exception:
-                    pass
+            if self.is_reachable(timeout=5):
+                logger.info("Hardware target is back online")
+                return
             time.sleep(2)
 
         raise RuntimeError(f"Hardware target did not come back online within {timeout_s} seconds after reboot")
