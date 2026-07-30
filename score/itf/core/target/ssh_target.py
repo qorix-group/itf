@@ -283,8 +283,28 @@ class SshTarget(Target):
             password=password if password is not None else self._ssh_password(),
         )
 
-    def sftp(self, ssh_connection=None):
-        return Sftp(ssh_connection, self._ssh_host(), self._ssh_port())
+    def sftp(
+        self,
+        ssh_connection=None,
+        timeout: int = 15,
+        port: int = None,
+        n_retries: int = 5,
+        retry_interval: int = 1,
+        pkey_path: str = None,
+        username: str = None,
+        password: str = None,
+    ):
+        return Sftp(
+            ssh_connection,
+            target_ip=self._ssh_host(),
+            port=port if port else self._ssh_port(),
+            timeout=timeout,
+            n_retries=n_retries,
+            retry_interval=retry_interval,
+            pkey_path=pkey_path if pkey_path is not None else self._ssh_pkey_path(),
+            username=username if username is not None else self._ssh_username(),
+            password=password if password is not None else self._ssh_password(),
+        )
 
     def ping(self, timeout, interval=1, wait_ms_precision=None):
         return ping(
