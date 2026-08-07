@@ -292,6 +292,7 @@ def qemu_target(test_config):
             port_forwarding=test_config.qemu_config.port_forwarding
             if hasattr(test_config.qemu_config, "port_forwarding")
             else [],
+            bios=test_config.qemu_bios if hasattr(test_config, "qemu_bios") else None,
         )
         if test_config.qemu_image
         else nullcontext() as qemu_process

@@ -32,6 +32,7 @@ class Qemu:
         cpu="Cascadelake-Server-v5",
         network_adapters=[],
         port_forwarding=[],
+        bios=None,
     ):
         """Create a QEMU instance with the specified parameters.
 
@@ -41,8 +42,24 @@ class Qemu:
         :param str cpu: The CPU model to emulate.
          Default is Cascadelake-Server-v5 used to emulate modern Intel CPU features.
          For older Ubuntu versions change that to host in case of errors.
+        :param str bios: Optional path to a BIOS/bootloader. Required for aarch64
+         (QEMU "virt"), where a Q-Boot BIOS loads the raw QNX IFS. Ignored on x86_64.
         """
-        self.__qemu_path = "/usr/bin/qemu-system-x86_64"
+        # The x86_64 defaults do not work for aarch64. Derive the target
+        # architecture from the image path so the same plugin can also boot a
+        # QNX aarch64 (QEMU "virt") image built from the joexue/qemu-virt BSP.
+        self.__is_aarch64 = "aarch64" in path_to_image
+        if self.__is_aarch64:
+            self.__qemu_path = "/usr/bin/qemu-system-aarch64"
+            self.__machine = "virt,gic-version=3"
+            self.__net_device = "virtio-net-device"  # MMIO transport (no PCI on virt)
+            if cpu == "Cascadelake-Server-v5":  # replace the x86-only default
+                cpu = "cortex-a53"
+        else:
+            self.__qemu_path = "/usr/bin/qemu-system-x86_64"
+            self.__machine = None
+            self.__net_device = "virtio-net-pci"
+        self.__bios = bios
         self.__path_to_image = path_to_image
         self.__ram = ram
         self.__cores = cores
@@ -87,6 +104,10 @@ class Qemu:
             sys.exit(-1)
 
     def __find_available_kvm_support(self):
+        # aarch64 guests cannot use KVM on an x86 host; always fall back to TCG.
+        if self.__is_aarch64:
+            self._accelerator_support = "tcg"
+            return
         self._accelerator_support = "kvm"
         with open("/proc/cpuinfo") as cpuinfo:
             cpu_options = str(cpuinfo.read())
@@ -111,6 +132,9 @@ class Qemu:
         return []
 
     def __build_qemu_command(self):
+        if self.__is_aarch64:
+            return self.__build_qemu_command_aarch64()
+
         # Use hardware virtualization if available
         accel = ["-enable-kvm"] if self._accelerator_support == "kvm" else ["-accel", "tcg"]
 
@@ -139,13 +163,42 @@ class Qemu:
             + self.__port_forwarding_args()
         )
 
+    def __build_qemu_command_aarch64(self):
+        # QEMU "virt" has no default boot ROM for a raw QNX IFS. The Q-Boot BIOS
+        # (built from the joexue/qemu-virt BSP) is loaded via -bios and jumps to
+        # the IFS loaded at the startup link address (must match [image=] in the
+        # buildfile). aarch64 cannot use KVM on an x86 host, so accel is TCG.
+        command = [
+            f"{self.__qemu_path}",
+            "-machine",
+            f"{self.__machine}",  # virt,gic-version=3
+            "-accel",
+            "tcg",
+            "-smp",
+            f"{self.__cores},maxcpus={self.__cores},cores={self.__cores}",
+            "-cpu",
+            f"{self.__cpu}",  # cortex-a53
+            "-m",
+            f"{self.__ram}",  # Specify RAM size
+            "-nographic",  # Disable graphical display (console-only)
+            "-serial",
+            "mon:stdio",  # Redirect serial output to console
+        ]
+        if self.__bios:
+            command += ["-bios", f"{self.__bios}"]
+        command += [
+            "-device",
+            f"loader,file={self.__path_to_image},addr=0x40200000,force-raw=true",
+        ]
+        return command + self._extra_qemu_args() + self.__network_devices_args() + self.__port_forwarding_args()
+
     def __network_devices_args(self):
         def get_netdev_args(adapter, id):
             return [
                 "-netdev",
                 f"tap,id=t{id},ifname={adapter},script=no,downscript=no",
                 "-device",
-                f"virtio-net-pci,netdev=t{id},id=nic{id},guest_csum=off",
+                f"{self.__net_device},netdev=t{id},id=nic{id},guest_csum=off",
             ]
 
         result = []
@@ -162,7 +215,7 @@ class Qemu:
                     "-netdev",
                     f"user,id=net{id},hostfwd=tcp::{forwarding.host_port}-:{forwarding.guest_port}",
                     "-device",
-                    f"virtio-net-pci,netdev=net{id}",
+                    f"{self.__net_device},netdev=net{id}",
                 ]
             )
         return result

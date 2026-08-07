@@ -31,6 +31,12 @@ def pytest_addoption(parser):
         help="Path to json file with target configurations.",
     )
     parser.addoption("--qemu-image", action="store", help="Path to a QEMU image")
+    parser.addoption(
+        "--qemu-bios",
+        action="store",
+        default=None,
+        help="Path to a BIOS/bootloader (required for aarch64 QEMU 'virt'; ignored on x86_64).",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -46,6 +52,7 @@ def config(request):
     return Bunch(
         qemu_config=load_configuration(request.config.getoption("qemu_config")),
         qemu_image=request.config.getoption("qemu_image"),
+        qemu_bios=request.config.getoption("qemu_bios"),
     )
 
 
